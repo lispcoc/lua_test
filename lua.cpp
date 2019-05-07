@@ -7,6 +7,15 @@
 #include "LuaIntf/LuaIntf.h"
 #include "kaguya.hpp"
 
+kaguya::State* state_p = nullptr;
+
+enum enum_test{
+    test1,
+    test2,
+    test3,
+    test4,
+};
+
 class NumTest
 {
   public:
@@ -38,17 +47,64 @@ class Test
         std::cout << p0 << std::endl;
         return "bbb";
     }
+    std::string get_enum(enum_test e)
+    {
+        std::cout << e << std::endl;
+        return "ccc";
+    }
 };
+
+enum_test enum_test_gen(std::string s){
+    if(s == "test1") return test1;
+    if(s == "test2") return test2;
+    if(s == "test3") return test3;
+    return test4;
+}
+namespace kaguya{
+template<>  struct lua_type_traits<enum_test> {
+	typedef enum_test get_type;
+	typedef const enum_test& push_type;
+
+    static bool strictCheckType(lua_State *l, int index) {
+        return lua_type_traits<luaInt>::strictCheckType(l, index);
+    }
+    static bool checkType(lua_State *l, int index) {
+        return lua_type_traits<luaInt>::checkType(l, index);
+    }
+	static get_type get(lua_State* l, int index)
+	{
+		size_t size = 0;
+		const char* buffer = lua_tolstring(l, index, &size);
+        if (buffer) {
+            std::string s = std::string(buffer, size);
+            std::cout << s << std::endl;
+            kaguya::State& state = *state_p;
+            if(state["enum_test"][s] != kaguya::NilValue()){
+                return state["enum_test"][s];
+            }
+        }
+		return static_cast<get_type>(lua_type_traits<luaInt>::get(l, index));
+	}
+	static int push(lua_State* l, push_type s)
+	{
+		lua_pushinteger(l, s);
+		return 1;
+	}
+};
+}
 
 void lua()
 {
     kaguya::State state;
+    state_p = &state;
     state["Test"].setClass(kaguya::UserdataMetatable<Test>()
         .setConstructors<Test(),Test(int)>()
         .addOverloadedFunctions("get", &Test::get_a, &Test::get_b)
+        .addOverloadedFunctions("get_enum", &Test::get_enum)
         .addProperty("a", &Test::a)
         .addProperty("v", &Test::v)
         );
+    
     auto t = Test();
     t.v = std::vector<int>{1,2,3};
     state.dofile("test.lua");

@@ -1,11 +1,11 @@
+enum_test = {
+    test1 = 0,
+    test2 = 1,
+    test3 = 2,
+    test4 = 3,
+}
+
 function testfunc(t)
-    print(t.a)
-    t.a = 22
-    print(t.a)
-    print(#t.v)
-    t2 = Test(1)
-    print(t2.a)
-    t3 = Test()
-    print(t3.a)
+    t:get_enum("test1")
     return 1
 end
